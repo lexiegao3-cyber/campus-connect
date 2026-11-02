@@ -1,0 +1,5 @@
+export const events=[
+{id:'demo-1',title:'Build night at the innovation lab',category:'Technology',location:'Pennovation Center',lat:39.941,lng:-75.199,time:'Friday · 6:00 PM',description:'Bring a side project, meet other builders, and leave with your next feature shipped.',demo:true},
+{id:'demo-2',title:'Coffee, conversation & new connections',category:'Social',location:'Locust Walk',lat:39.952,lng:-75.194,time:'Saturday · 10:00 AM',description:'A low-key morning walk for people who want to meet beyond their major.',demo:true},
+{id:'demo-3',title:'Weekend trail running crew',category:'Outdoors',location:'Schuylkill River Trail',lat:39.955,lng:-75.180,time:'Sunday · 8:00 AM',description:'An easy-paced loop along the river. All experience levels welcome.',demo:true},
+{id:'demo-4',title:'Sketch the city',category:'Arts',location:'Fisher Fine Arts Library',lat:39.951,lng:-75.192,time:'Saturday · 2:00 PM',description:'Explore architecture through a sketchbook. Bring a pencil and your curiosity.',demo:true}];
