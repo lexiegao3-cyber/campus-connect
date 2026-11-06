@@ -1,93 +1,88 @@
 # Campus Connect
 
-A full-stack campus activity discovery and RSVP application.
+Campus event discovery and RSVPs, running on Cloudflare's edge: a Hono API on Workers, Cloudflare D1
+(SQLite) for storage, and a React single-page app served as Workers static assets.
 
-**Status:** deployed portfolio MVP. The feature list below describes the current implementation; planned capabilities are listed separately.
+![Events](docs/events.png)
+![Create event](docs/create.png)
 
 ## Features
 
-- Browse fictional sample activities and user-created events.
-- Search activity titles and filter by category.
-- Create events with a location, coordinates, date/time, and description.
-- Open activity locations in OpenStreetMap.
-- Sign in with ChatGPT and maintain a personal RSVP list.
-- Persist events and user-specific RSVPs using parameterized SQL and duplicate-safe writes.
+- Browse upcoming events; full-text search over title, description and location; category filter; "next 7 days".
+- Create, edit and cancel events (organizer only), with optional coordinates and capacity.
+- One-click map links (OpenStreetMap / Google Maps) from coordinates or the location text.
+- RSVP with **capacity limits and a FIFO waitlist**; cancelling a seat promotes the next person automatically.
+- **Schedule-conflict warnings** when you RSVP to an event that overlaps one you're already attending.
+- Personal lists ("My RSVPs", "Hosting") and an **iCalendar (.ics) export** of everything you're attending.
 
-## Technology stack
+## Engineering notes
 
-| Layer | Technology |
-| --- | --- |
-| User interface | React 19, TypeScript, CSS |
-| Application framework | Vinext with Next.js-compatible app routes |
-| Server runtime | Cloudflare Workers |
-| Persistence | Cloudflare D1 / SQLite; Drizzle schema migrations |
-| Identity | Sites-provided Sign in with ChatGPT |
-| Development | Node.js 22.13 or later, npm, TypeScript |
+**Duplicate-safe, race-free RSVPs.** `rsvps` has a composite primary key `(event_id, user_id)`, so a
+double-click or retried request cannot create a second row (`INSERT … ON CONFLICT DO NOTHING`, 201 vs 200).
+Seat assignment happens inside that single `INSERT … SELECT`, which counts current attendees and picks
+`going` or `waitlist` atomically, so two people cannot take the last seat. Cancelling and promoting the
+head of the waitlist run in one `db.batch()` transaction, and the promotion re-checks capacity, so a
+waitlisted user leaving never over-fills an event. Raising capacity admits the waitlist in order;
+lowering it below current attendance is rejected with 409.
 
-Node.js is used for development and testing. The deployed server runs in Cloudflare Workers, not an Express server.
+**Parameterized SQL everywhere.** All queries use numbered bind parameters (`?1 … ?N`); dynamic `UPDATE`
+column names come from a fixed whitelist. Search escapes `%` and `_` so user input is matched literally.
 
-## Architecture
+**Keyset pagination.** Listing orders by `(starts_at, id)` and pages with an opaque cursor encoding the
+last row, which stays correct while new events are inserted and uses the `idx_events_starts` index.
 
-```text
-React interface -> /api/data -> authenticated server handlers -> Cloudflare D1
+**Auth on the edge.** Passwords are hashed with PBKDF2-SHA256 (100k iterations, per-user salt) through
+the Web Crypto API, which Workers provide natively, and compared in constant time. Sessions are HS256
+JWTs (`hono/jwt`) signed with a Worker secret. Public endpoints accept an optional token so the listing
+can show "You're going" without requiring sign-in.
+
+**Validation.** Zod schemas enforce field rules (lengths, category enum, ISO-8601 timestamps with offset,
+coordinate ranges) and cross-field rules (end after start, lat/lon given together, no past events),
+returning field-level `400` errors.
+
+## Layout
+
 ```
-
-The server derives user identity from trusted platform-provided authentication headers rather than a client-supplied user ID. Records use parameterized SQL. User-owned writes are scoped to the signed-in user.
+worker/
+  src/index.ts        Hono routes, error mapping
+  src/events.ts       listing (filters, search, keyset cursor), CRUD, map links
+  src/rsvp.ts         RSVP state machine: capacity, waitlist, promotion, conflicts
+  src/auth.ts         JWT session middleware          src/crypto.ts   PBKDF2 hashing
+  src/ics.ts          RFC 5545 export (escaping, 75-octet line folding)
+  src/validation.ts   Zod schemas
+  migrations/         D1 SQL migrations (CHECK constraints, FKs, indexes)
+  test/               Vitest suite; d1-shim.ts runs the real migration + SQL on better-sqlite3
+web/                  React 19 + TypeScript + Vite
+```
 
 ## Run locally
 
-Prerequisites: Node.js 22.13+ and npm.
-
-```sh
-git clone https://github.com/lexiegao3-cyber/campus-connect.git
-cd campus-connect
-npm ci
-npm run build
+```bash
+cd web && npm install && npm run build            # builds the SPA into web/dist
+cd ../worker && npm install
+cp .dev.vars.example .dev.vars                    # set SESSION_SECRET
 npm run db:migrate:local
-npm run dev
+npm run dev                                        # http://localhost:8787 (API + SPA)
 ```
 
-Open the local URL printed by the development server, then use **Sign in with ChatGPT**. The portable development profile simulates a local test identity; it is not a production authentication system. The generated build configuration is required by the database migration command.
+For frontend hot reload, run `npm run dev` in `web/` as well (Vite proxies `/api` to port 8787).
 
-Local data is stored under the ignored `.wrangler/` directory. Do not commit databases, credentials, or local environment files.
+## Deploy
 
-## Verification
-
-```sh
-npm run typecheck
-npm run build
+```bash
+npx wrangler d1 create campus_connect             # put the id in worker/wrangler.toml
+npx wrangler secret put SESSION_SECRET
+cd web && npm run build && cd ../worker
+npm run db:migrate:remote && npm run deploy
 ```
 
-Type checking and builds passed for the original MVP. Browser checks covered authenticated database-backed interactions. This is not a security audit or load-test certification.
+## Tests
 
-## API
-
-- `GET /api/data`: load application records for the current interface and identity.
-- `POST /api/data`: submit a validated application action.
-
-Handlers live in `app/api/data/route.ts`. Business logic, where separated, lives in `app/rank.mjs` or `app/analysis.mjs`. API error responses use an `error` field.
-
-## Repository structure
-
-```text
-app/                 React pages, application logic, and API handlers
-db/schema.ts         Database schema
-drizzle/             Versioned SQL migrations
-scripts/             Framework and local runtime helpers
-worker/              Production Worker entry point
-.openai/hosting.json Hosting binding declarations, without an existing Site ID
+```bash
+cd worker && npm test
 ```
 
-## Deployment
-
-The existing MVP is hosted privately through Sites; its URL requires owner access and is not an anonymous public demo. A GitHub upload does not deploy this application or grant access to that private Site.
-
-To deploy a new instance, register a new Site, retain the declared D1 binding, build the application, and publish using the Sites workflow. `.openai/hosting.json` intentionally omits the original project's Site ID. Deploying outside Sites requires replacing its authentication integration and configuring the hosting bindings.
-
-## Limitations
-
-The seeded events are fictional. Map links open an external service; an embedded map, distance-based matching, capacity controls, real-time messaging, and notifications are not implemented. Hosted authentication is supplied by the Sites platform; local preview uses its development-only identity simulation.
-
-## Attribution
-
-The application uses the Sites Vinext starter and third-party dependencies. Vendored components retain their bundled license notices, including the notices under `vendor/` and `scripts/vite/`. No competition awards, adoption statistics, or performance claims are borrowed from another applicant's projects.
+10 test cases covering password hashing, auth flows, field-level validation, category filter + literal
+search + cursor pagination, organizer-only edits, duplicate-safe RSVPs, capacity/waitlist/promotion,
+capacity changes, conflict detection, personal lists and calendar export, and iCalendar line folding.
+CI type-checks and tests the Worker and builds the web app.
