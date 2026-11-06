@@ -1,6 +1,8 @@
-import { useCallback, useEffect, useState } from "react";
+import { AnimatePresence, MotionConfig, motion } from "motion/react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { api, type CampusEvent, type User } from "./api";
 import { EventCard } from "./components/EventCard";
+import { startOfDay, WeekStrip } from "./components/WeekStrip";
 
 type View = "all" | "going" | "organizing";
 
@@ -11,11 +13,12 @@ export default function App() {
   const [categories, setCategories] = useState<string[]>([]);
   const [category, setCategory] = useState("");
   const [q, setQ] = useState("");
-  const [week, setWeek] = useState(false);
   const [view, setView] = useState<View>("all");
   const [items, setItems] = useState<CampusEvent[]>([]);
+  const [week, setWeek] = useState<CampusEvent[]>([]);
   const [cursor, setCursor] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
+  const [highlight, setHighlight] = useState<number | null>(null);
 
   useEffect(() => {
     api.categories().then(setCategories);
@@ -23,26 +26,30 @@ export default function App() {
   }, []);
 
   const filters = useCallback(
-    () => ({
-      q: q || undefined,
-      category: category || undefined,
-      to: week ? new Date(Date.now() + 7 * 864e5).toISOString() : undefined,
-      mine: view === "all" ? undefined : view,
-      limit: "10",
-    }),
-    [q, category, week, view],
+    () => ({ q: q || undefined, category: category || undefined, mine: view === "all" ? undefined : view, limit: "15" }),
+    [q, category, view],
   );
 
   const load = useCallback(async () => {
-    const page = await api.list(filters());
+    const [page, wk] = await Promise.all([
+      api.list(filters()),
+      api.list({ ...filters(), to: new Date(startOfDay(new Date()).getTime() + 7 * 864e5).toISOString(), limit: "50" }),
+    ]);
     setItems(page.items);
     setCursor(page.nextCursor);
+    setWeek(wk.items);
   }, [filters]);
 
   useEffect(() => {
     const t = setTimeout(() => load().catch((e) => setToast(e.message)), 200);
     return () => clearTimeout(t);
   }, [load, user]);
+
+  useEffect(() => {
+    if (!toast) return;
+    const t = setTimeout(() => setToast(null), 5000);
+    return () => clearTimeout(t);
+  }, [toast]);
 
   async function more() {
     if (!cursor) return;
@@ -68,87 +75,145 @@ export default function App() {
     URL.revokeObjectURL(url);
   }
 
+  function pick(id: number) {
+    document.getElementById(`event-${id}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+    setHighlight(id);
+    setTimeout(() => setHighlight(null), 1700);
+  }
+
+  const groups = useMemo(() => {
+    const out: { day: Date; events: CampusEvent[] }[] = [];
+    for (const e of items) {
+      const d = startOfDay(new Date(e.startsAt));
+      const last = out[out.length - 1];
+      if (last && last.day.getTime() === d.getTime()) last.events.push(e);
+      else out.push({ day: d, events: [e] });
+    }
+    return out;
+  }, [items]);
+
+  const dayLabel = (d: Date) => {
+    const diff = Math.round((d.getTime() - startOfDay(new Date()).getTime()) / 864e5);
+    const base = d.toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" });
+    return diff === 0 ? `Today, ${base}` : diff === 1 ? `Tomorrow, ${base}` : base;
+  };
+
   return (
+    <MotionConfig reducedMotion="user">
     <div className="page">
       <header className="top">
-        <h1>Campus Connect</h1>
+        <span className="wordmark">Campus Connect</span>
         <div className="top-actions">
           {user ? (
             <>
-              <button onClick={() => setShowCreate(true)}>+ Create event</button>
-              <span className="hello">Hi, {user.displayName}</span>
+              <span className="hello">Signed in as {user.displayName}</span>
               <button className="ghost" onClick={() => { api.logout(); setUser(null); setView("all"); }}>Sign out</button>
+              <button className="primary" onClick={() => setShowCreate(true)}>Host an event</button>
             </>
           ) : (
-            <button onClick={() => setShowAuth(true)}>Sign in</button>
+            <button className="primary" onClick={() => setShowAuth(true)}>Sign in to RSVP</button>
           )}
         </div>
       </header>
 
+      <section className="week-wrap">
+        <h1>{view === "going" ? "Your week" : view === "organizing" ? "What you're hosting" : "This week on campus"}</h1>
+        <WeekStrip events={week} onPick={pick} />
+      </section>
+
       <div className="toolbar">
-        <input className="search" placeholder="Search events, rooms, topics…" value={q} onChange={(e) => setQ(e.target.value)} />
-        <label className="check"><input type="checkbox" checked={week} onChange={(e) => setWeek(e.target.checked)} /> Next 7 days</label>
+        <input className="search" aria-label="Search events" placeholder="Search talks, rooms, clubs" value={q} onChange={(e) => setQ(e.target.value)} />
         {user && (
-          <div className="seg">
+          <div className="seg" role="group" aria-label="Which events">
             {(["all", "going", "organizing"] as View[]).map((v) => (
-              <button key={v} className={view === v ? "on" : ""} onClick={() => setView(v)}>
-                {v === "all" ? "All" : v === "going" ? "My RSVPs" : "Hosting"}
+              <button key={v} aria-pressed={view === v} onClick={() => setView(v)}>
+                {v === "all" ? "Everything" : v === "going" ? "My RSVPs" : "Hosting"}
               </button>
             ))}
           </div>
         )}
-        {user && view === "going" && <button className="ghost" onClick={downloadCalendar}>Add to calendar (.ics)</button>}
+        {user && view === "going" && <button className="ghost" onClick={downloadCalendar}>Add to my calendar</button>}
       </div>
-      <div className="cats">
-        <button className={category === "" ? "on" : ""} onClick={() => setCategory("")}>All</button>
+      <div className="cats" role="group" aria-label="Category">
+        <button aria-pressed={category === ""} onClick={() => setCategory("")}>All categories</button>
         {categories.map((c) => (
-          <button key={c} className={`cat-${c} ${category === c ? "on" : ""}`} onClick={() => setCategory(c)}>{c}</button>
+          <button key={c} aria-pressed={category === c} className={`cat-${c}`} onClick={() => setCategory(c)}>{c}</button>
         ))}
       </div>
 
-      <main className="list">
-        {items.length === 0 && <p className="empty">No upcoming events match. Why not host one?</p>}
-        {items.map((e) => (
-          <EventCard
-            key={e.id}
-            event={e}
-            signedIn={!!user}
-            isOrganizer={user?.id === e.organizer.id}
-            onRsvp={() =>
-              act(async () => {
-                const r = await api.rsvp(e.id);
-                const base = r.status === "going" ? `You're going to ${e.title}.` : `Event is full — you're on the waitlist.`;
-                return r.conflicts.length ? `${base} Heads up: overlaps with ${r.conflicts.map((c) => c.title).join(", ")}.` : base;
-              })
-            }
-            onLeave={() => act(async () => { await api.unrsvp(e.id); return "RSVP removed."; })}
-            onCancel={() => confirm(`Cancel "${e.title}"?`) && act(async () => { await api.cancel(e.id); return "Event cancelled."; })}
-          />
+      <main className="agenda">
+        {items.length === 0 && (
+          <p className="empty">
+            Nothing matches yet. {user ? "Host something and it will show up here." : "Sign in to host the first one."}
+          </p>
+        )}
+        {groups.map((g) => (
+          <section key={g.day.getTime()} className="agenda-day">
+            <h2>{dayLabel(g.day)}</h2>
+            {g.events.map((e) => (
+              <EventCard
+                key={e.id}
+                event={e}
+                signedIn={!!user}
+                isOrganizer={user?.id === e.organizer.id}
+                highlight={highlight === e.id}
+                onRsvp={() =>
+                  act(async () => {
+                    const r = await api.rsvp(e.id);
+                    const base = r.status === "going" ? `You're going to ${e.title}.` : `${e.title} is full, so you're on the waitlist.`;
+                    return r.conflicts.length ? `${base} It overlaps with ${r.conflicts.map((c) => c.title).join(" and ")}.` : base;
+                  })
+                }
+                onLeave={() => act(async () => { await api.unrsvp(e.id); return `RSVP for ${e.title} cancelled.`; })}
+                onCancel={() => confirm(`Cancel "${e.title}" for everyone?`) && act(async () => { await api.cancel(e.id); return `${e.title} cancelled.`; })}
+              />
+            ))}
+          </section>
         ))}
-        {cursor && <button className="ghost more" onClick={more}>Load more</button>}
+        {cursor && <button className="ghost more" onClick={more}>Show later events</button>}
       </main>
 
-      {toast && <div className="toast" onClick={() => setToast(null)}>{toast}</div>}
-      {showAuth && <AuthDialog onClose={() => setShowAuth(false)} onAuthed={(u) => { setUser(u); setShowAuth(false); }} />}
-      {showCreate && (
-        <CreateDialog
-          categories={categories}
-          onClose={() => setShowCreate(false)}
-          onCreated={async (ev) => { setShowCreate(false); setToast(`Created "${ev.title}".`); await load(); }}
-        />
-      )}
+      <AnimatePresence>
+        {toast && (
+          <motion.div className="toast" role="status" onClick={() => setToast(null)} initial={{ y: 40, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 40, opacity: 0 }}>
+            {toast}
+          </motion.div>
+        )}
+      </AnimatePresence>
+      <AnimatePresence>
+        {showAuth && <AuthDialog key="auth" onClose={() => setShowAuth(false)} onAuthed={(u) => { setUser(u); setShowAuth(false); }} />}
+        {showCreate && (
+          <CreateDialog
+            key="create"
+            categories={categories}
+            onClose={() => setShowCreate(false)}
+            onCreated={async (ev) => { setShowCreate(false); setToast(`Published ${ev.title}.`); await load(); }}
+          />
+        )}
+      </AnimatePresence>
     </div>
+    </MotionConfig>
   );
 }
 
 function Dialog({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
   return (
-    <div className="backdrop" onClick={onClose}>
-      <div className="dialog" onClick={(e) => e.stopPropagation()}>
-        <div className="dialog-head"><h2>{title}</h2><button className="ghost" onClick={onClose}>✕</button></div>
+    <motion.div className="backdrop" onClick={onClose} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+      <motion.div
+        className="dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-label={title}
+        onClick={(e) => e.stopPropagation()}
+        initial={{ scale: 0.96, y: 12 }}
+        animate={{ scale: 1, y: 0 }}
+        exit={{ scale: 0.97, y: 8 }}
+        transition={{ type: "spring", stiffness: 420, damping: 32 }}
+      >
+        <div className="dialog-head"><h2>{title}</h2><button className="ghost close" aria-label="Close" onClick={onClose}>Close</button></div>
         {children}
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 }
 
@@ -173,7 +238,7 @@ function AuthDialog({ onClose, onAuthed }: { onClose: () => void; onAuthed: (u: 
         <label>Email<input type="email" required value={f.email} onChange={(e) => setF({ ...f, email: e.target.value })} /></label>
         <label>Password<input type="password" required minLength={8} value={f.password} onChange={(e) => setF({ ...f, password: e.target.value })} /></label>
         {err && <p className="error">{err}</p>}
-        <button>{mode === "login" ? "Sign in" : "Create account"}</button>
+        <button className="primary">{mode === "login" ? "Sign in" : "Create account"}</button>
         <button type="button" className="ghost" onClick={() => setMode(mode === "login" ? "register" : "login")}>
           {mode === "login" ? "New here? Create an account" : "Have an account? Sign in"}
         </button>
@@ -195,7 +260,7 @@ function CreateDialog({ categories, onClose, onCreated }: { categories: string[]
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => setF({ ...f, [k]: e.target.value });
 
   return (
-    <Dialog title="Create event" onClose={onClose}>
+    <Dialog title="Host an event" onClose={onClose}>
       <form
         className="form"
         onSubmit={async (e) => {
@@ -233,7 +298,7 @@ function CreateDialog({ categories, onClose, onCreated }: { categories: string[]
         </div>
         <label>Description<textarea rows={3} value={f.description} onChange={set("description")} /></label>
         {err && <p className="error">{err}</p>}
-        <button>Publish</button>
+        <button className="primary">Publish event</button>
       </form>
     </Dialog>
   );

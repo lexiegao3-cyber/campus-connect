@@ -3,8 +3,16 @@
 Campus event discovery and RSVPs, running on Cloudflare's edge: a Hono API on Workers, Cloudflare D1
 (SQLite) for storage, and a React single-page app served as Workers static assets.
 
-![Events](docs/events.png)
-![Create event](docs/create.png)
+![This week on campus](docs/events.png)
+![RSVP with seat map](docs/rsvp.png)
+
+## Interface
+
+The first screen is the week itself: seven day columns from 8 am to 11 pm, with every event drawn as a block
+sized by its start time and duration, so clashes and busy evenings are visible at a glance. Clicking a block
+jumps to the event in the day-by-day agenda below. Capacity is shown as a row of seats; when you RSVP your
+seat fills in amber and the free-seat count rolls down. Motion is built with Motion for React and switches off
+when the system asks for reduced motion. Type is Schibsted Grotesk (SIL OFL).
 
 ## Features
 
@@ -52,7 +60,7 @@ worker/
   src/validation.ts   Zod schemas
   migrations/         D1 SQL migrations (CHECK constraints, FKs, indexes)
   test/               Vitest suite; d1-shim.ts runs the real migration + SQL on better-sqlite3
-web/                  React 19 + TypeScript + Vite
+web/                  React 19 + TypeScript + Vite + Motion (week strip, seat map, dialogs)
 ```
 
 ## Run locally

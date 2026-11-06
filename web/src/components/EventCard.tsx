@@ -1,12 +1,14 @@
+import { motion } from "motion/react";
 import type { CampusEvent } from "../api";
+import { Seats } from "./Seats";
 
-const fmtDay = new Intl.DateTimeFormat(undefined, { weekday: "short", month: "short", day: "numeric" });
 const fmtTime = new Intl.DateTimeFormat(undefined, { hour: "numeric", minute: "2-digit" });
 
 export function EventCard(props: {
   event: CampusEvent;
   signedIn: boolean;
   isOrganizer: boolean;
+  highlight: boolean;
   onRsvp: () => void;
   onLeave: () => void;
   onCancel: () => void;
@@ -17,47 +19,44 @@ export function EventCard(props: {
   const full = e.seatsLeft === 0;
 
   return (
-    <article className={`event cat-${e.category}`}>
-      <div className="date">
-        <span className="month">{start.toLocaleString(undefined, { month: "short" })}</span>
-        <span className="day">{start.getDate()}</span>
+    <motion.article
+      id={`event-${e.id}`}
+      layout="position"
+      className={`event cat-${e.category}`}
+      animate={{ backgroundColor: props.highlight ? ["rgba(255,214,102,0.45)", "rgba(255,214,102,0)"] : "rgba(255,214,102,0)" }}
+      transition={{ duration: 1.6 }}
+    >
+      <div className="time">
+        <span>{fmtTime.format(start)}</span>
+        <small>to {fmtTime.format(end)}</small>
       </div>
       <div className="event-main">
-        <div className="event-top">
-          <span className="cat">{e.category}</span>
-          {e.myStatus === "going" && <span className="pill going">You're going</span>}
-          {e.myStatus === "waitlist" && <span className="pill wait">On waitlist</span>}
-        </div>
         <h3>{e.title}</h3>
-        <p className="when">
-          {fmtDay.format(start)} · {fmtTime.format(start)} – {fmtTime.format(end)}
-        </p>
         <p className="where">
-          {e.location} ·{" "}
+          <span className="cat">{e.category}</span>
+          {e.location}
           <a href={e.maps.openStreetMap} target="_blank" rel="noreferrer">
-            Map
+            Open map
           </a>
         </p>
         {e.description && <p className="desc">{e.description}</p>}
-        <div className="event-foot">
-          <span className="meta">
-            Hosted by {e.organizer.name} · {e.goingCount} going
-            {e.capacity !== null && ` · ${e.seatsLeft} of ${e.capacity} seats left`}
-            {e.waitlistCount > 0 && ` · ${e.waitlistCount} waitlisted`}
-          </span>
-          {props.signedIn && (
-            <span className="buttons">
-              {props.isOrganizer ? (
-                <button className="ghost danger" onClick={props.onCancel}>Cancel event</button>
-              ) : e.myStatus ? (
-                <button className="ghost" onClick={props.onLeave}>{e.myStatus === "going" ? "Can't go" : "Leave waitlist"}</button>
-              ) : (
-                <button onClick={props.onRsvp}>{full ? "Join waitlist" : "RSVP"}</button>
-              )}
-            </span>
-          )}
-        </div>
+        <p className="host">Hosted by {e.organizer.name}</p>
       </div>
-    </article>
+      <div className="event-side">
+        <Seats capacity={e.capacity} going={e.goingCount} mine={e.myStatus === "going"} />
+        {e.waitlistCount > 0 && <p className="wait-count">{e.waitlistCount} on the waitlist</p>}
+        {props.signedIn ? (
+          props.isOrganizer ? (
+            <button className="ghost danger" onClick={props.onCancel}>Cancel event</button>
+          ) : e.myStatus === "going" ? (
+            <button className="ghost going" onClick={props.onLeave}>You're going. Cancel RSVP</button>
+          ) : e.myStatus === "waitlist" ? (
+            <button className="ghost" onClick={props.onLeave}>Leave waitlist</button>
+          ) : (
+            <button className="primary" onClick={props.onRsvp}>{full ? "Join waitlist" : "RSVP"}</button>
+          )
+        ) : null}
+      </div>
+    </motion.article>
   );
 }
