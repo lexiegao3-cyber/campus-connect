@@ -13,6 +13,8 @@ import { CATEGORIES, LEVELS, SPORTS } from "./vocab.js";
 export interface AppOptions {
   hub?: Hub;
   now?: () => Date;
+  /** Browser key for the Maps JavaScript API (restrict it by HTTP referrer) and a map ID for Advanced Markers. */
+  maps?: { apiKey?: string; mapId?: string };
   /** Injected in tests; defaults to verifying with Google. */
   verifyGoogle?: (credential: string) => Promise<GoogleIdentity>;
 }
@@ -100,7 +102,15 @@ export function createApp(cfg: AuthConfig, opts: AppOptions = {}) {
   app.use(express.json({ limit: "32kb" }));
 
   app.get("/api/health", (_req, res) => res.json({ status: "ok" }));
-  app.get("/api/config", (_req, res) => res.json({ googleClientId: cfg.googleClientId ?? null, devLogin: cfg.devLogin }));
+  const maps = opts.maps ?? { apiKey: process.env.GOOGLE_MAPS_API_KEY, mapId: process.env.GOOGLE_MAPS_MAP_ID };
+  app.get("/api/config", (_req, res) =>
+    res.json({
+      googleClientId: cfg.googleClientId ?? null,
+      devLogin: cfg.devLogin,
+      googleMapsKey: maps.apiKey || null,
+      googleMapsMapId: maps.apiKey ? maps.mapId || "DEMO_MAP_ID" : null,
+    }),
+  );
 
   // ---- sign in: the email domain decides the school ------------------------------------
   const authLimit = limit(30, 15 * 60_000, (req) => req.ip ?? "?");

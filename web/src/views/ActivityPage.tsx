@@ -74,8 +74,8 @@ export function ActivityPage({ id }: { id: string }) {
 
       {a.status === "deciding" && a.youHost && (
         <section className="decide">
-          <b>{t("act.decideTitle")}</b>
-          <p>{t("act.decideSub", { n: a.joinedCount, cap: a.capacity })}</p>
+          <b>{a.spotsLeft === 0 ? t("act.decideTitleFull") : t("act.decideTitle")}</b>
+          <p>{a.spotsLeft === 0 ? t("act.decideSubFull", { cap: a.capacity }) : t("act.decideSub", { n: a.joinedCount, cap: a.capacity })}</p>
           <div className="row gap-s">
             <button className="btn primary grow" disabled={busy || a.joinedCount < 2} onClick={() => act(() => api.decide(a.id, "start"))}>{t("act.start")}</button>
             <button className="btn ghost grow" disabled={busy} onClick={() => act(() => api.decide(a.id, "cancel"))}>{t("act.cancel")}</button>

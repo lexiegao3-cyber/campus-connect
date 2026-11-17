@@ -192,23 +192,19 @@ export class Services {
   /**
    * Runs every 30 s. Each transition is a conditional update on the current
    * status, so running it twice (or on two servers) never double-notifies.
-   *  - fill-by passed, still open → "deciding": host chooses start or cancel; joiners told joining closed
-   *  - fill-by passed, full → "confirmed" automatically
+   *  - fill-by passed (full or not) → "deciding": joining closes and the host
+   *    confirms: start with whoever joined, or cancel. Joiners are told.
    *  - start time passed while still deciding → cancelled automatically
    *  - end time passed → done; expired "looking for" posts → inactive
    */
   async sweep() {
     const now = this.now();
-    const out = { deciding: 0, confirmed: 0, autoCancelled: 0, done: 0, seeksClosed: 0 };
-    for (let a; (a = await Activity.findOneAndUpdate({ status: "open", fillBy: { $lte: now } }, { status: "deciding" }, { returnDocument: "after" }).lean<ActivityDoc>()); ) {
+    const out = { deciding: 0, autoCancelled: 0, done: 0, seeksClosed: 0 };
+    for (let a; (a = await Activity.findOneAndUpdate({ status: { $in: ["open", "full"] }, fillBy: { $lte: now } }, { status: "deciding" }, { returnDocument: "after" }).lean<ActivityDoc>()); ) {
       out.deciding++;
-      await this.notify(id(a.host), "deadline", { activity: a }, { joined: a.participants.length + 1, capacity: a.capacity });
-      await Promise.all(a.participants.map((p) => this.notify(id(p.user), "closed", { activity: a }, { joined: a.participants.length + 1, capacity: a.capacity })));
-      this.broadcast(a);
-    }
-    for (let a; (a = await Activity.findOneAndUpdate({ status: "full", fillBy: { $lte: now } }, { status: "confirmed", decidedAt: now }, { returnDocument: "after" }).lean<ActivityDoc>()); ) {
-      out.confirmed++;
-      await Promise.all([id(a.host), ...a.participants.map((p) => id(p.user))].map((u) => this.notify(u, "confirmed", { activity: a }, { joined: a.participants.length + 1 })));
+      const params = { joined: a.participants.length + 1, capacity: a.capacity, full: a.participants.length + 1 >= a.capacity };
+      await this.notify(id(a.host), "deadline", { activity: a }, params);
+      await Promise.all(a.participants.map((p) => this.notify(id(p.user), "closed", { activity: a }, params)));
       this.broadcast(a);
     }
     for (let a; (a = await Activity.findOneAndUpdate({ status: "deciding", startsAt: { $lte: now } }, { status: "cancelled", decidedAt: now }, { returnDocument: "after" }).lean<ActivityDoc>()); ) {
