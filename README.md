@@ -54,4 +54,4 @@ Sign in with any `@upenn.edu` address to see the demo data (demo sign-in needs n
 
 ## Project plan
 
-The plan (users, features, matching, state machine, architecture, milestones) is in Chinese in the project doc; this README tracks what is built.
+The project plan (in Chinese: users, features, matching, state machine, architecture, milestones) is at [docs/project-plan.pdf](docs/project-plan.pdf). This README tracks what is built.
