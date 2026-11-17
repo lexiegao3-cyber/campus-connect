@@ -1,6 +1,6 @@
-# SpotMe
+# SpotMe — Campus Activity-Partner Matching Platform
 
-Find a buddy at your school, for a game, a meal, a study session, a movie or a trip. Post a plan ("badminton Wednesday 6–8 pm, need 3, fill by 4 pm") or just say you're free ("badminton, weekday evenings this week, intermediate"). SpotMe matches people at the same school, explains each match, and pushes updates in real time. Works for any university: the email domain decides the school. English and Chinese, mobile first.
+Find activity partners at your school, for a game, a meal, a study session, a movie or a trip. Post a plan ("badminton Wednesday 6–8 pm, need 3, fill by 4 pm") or just say you're free ("badminton, weekday evenings this week, intermediate"). SpotMe matches people at the same school, explains each match, and pushes updates in real time. Works for any university: the email domain decides the school. English and Chinese, mobile first.
 
 | Sign up (中文) | Discover | Plan (中文) | Matches (中文) | Live update |
 | --- | --- | --- | --- | --- |
