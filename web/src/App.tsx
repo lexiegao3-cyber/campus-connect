@@ -38,15 +38,15 @@ function Shell() {
   const text = useNotificationText();
   useEffect(() => {
     const h = (e: Event) => s.flash(text((e as CustomEvent<Notification>).detail));
-    addEventListener("cc:notification", h);
-    return () => removeEventListener("cc:notification", h);
+    addEventListener("spotme:notification", h);
+    return () => removeEventListener("spotme:notification", h);
   }, [s.flash, text]);
   const r = s.route;
   return (
     <div className="shell">
       <header className="top">
         <button className="brand" onClick={() => s.go({ name: "discover" })}>
-          <span className="logo">cc</span>
+          <span className="logo">sm</span>
           <span className="brand-text"><b>{t("app.name")}</b><small>{s.me.school.name}</small></span>
         </button>
         <div className="top-right">

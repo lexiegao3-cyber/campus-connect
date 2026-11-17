@@ -78,7 +78,7 @@ export function Auth({ onIn }: { onIn(m: Me): void }) {
       </div>
       <div className="auth-body">
         <div className="row between">
-          <span className="brand static"><span className="logo">cc</span><b>{t("app.name")}</b></span>
+          <span className="brand static"><span className="logo">sm</span><b>{t("app.name")}</b></span>
           <button className="lang" onClick={() => setLang(lang === "en" ? "zh" : "en")}>{lang === "en" ? "中文" : "EN"}</button>
         </div>
         <h1>{t("auth.title")}</h1>

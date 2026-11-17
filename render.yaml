@@ -2,7 +2,7 @@
 # MONGODB_URI: a MongoDB Atlas connection string (the free M0 cluster is enough).
 services:
   - type: web
-    name: campus-connect
+    name: spotme
     runtime: node
     plan: free
     buildCommand: >-
