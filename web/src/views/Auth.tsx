@@ -1,17 +1,16 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { api, setToken, type Me, type School } from "../api";
+import { appConfig, type AppConfig } from "../config";
 import { useI18n } from "../i18n";
 import { emojiFor } from "../ui";
 
-declare global {
-  interface Window {
-    google?: { accounts: { id: { initialize(o: unknown): void; renderButton(el: HTMLElement, o: unknown): void } } };
-  }
-}
+/** Google Identity Services, loaded from accounts.google.com/gsi/client. */
+type Gis = { accounts: { id: { initialize(o: unknown): void; renderButton(el: HTMLElement, o: unknown): void } } };
+const gis = () => (window as unknown as { google?: Gis }).google;
 
 export function Auth({ onIn }: { onIn(m: Me): void }) {
   const { t, lang, setLang } = useI18n();
-  const [cfg, setCfg] = useState<{ googleClientId: string | null; devLogin: boolean } | null>(null);
+  const [cfg, setCfg] = useState<AppConfig | null>(null);
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
   const [school, setSchool] = useState<School | null>(null);
@@ -20,7 +19,7 @@ export function Auth({ onIn }: { onIn(m: Me): void }) {
   const gBtn = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    api.config().then(setCfg, () => setCfg({ googleClientId: null, devLogin: true }));
+    void appConfig().then(setCfg);
   }, []);
 
   // Live school detection as the email is typed.
@@ -34,7 +33,7 @@ export function Auth({ onIn }: { onIn(m: Me): void }) {
   useEffect(() => {
     if (!cfg?.googleClientId || !gBtn.current) return;
     const init = () => {
-      window.google!.accounts.id.initialize({
+      gis()!.accounts.id.initialize({
         client_id: cfg.googleClientId,
         callback: async (r: { credential: string }) => {
           try {
@@ -46,9 +45,9 @@ export function Auth({ onIn }: { onIn(m: Me): void }) {
           }
         },
       });
-      window.google!.accounts.id.renderButton(gBtn.current!, { theme: "outline", size: "large", shape: "pill", width: 320, locale: lang === "zh" ? "zh_CN" : "en" });
+      gis()!.accounts.id.renderButton(gBtn.current!, { theme: "outline", size: "large", shape: "pill", width: 320, locale: lang === "zh" ? "zh_CN" : "en" });
     };
-    if (window.google) return init();
+    if (gis()?.accounts) return init();
     const s = document.createElement("script");
     s.src = "https://accounts.google.com/gsi/client";
     s.async = true;

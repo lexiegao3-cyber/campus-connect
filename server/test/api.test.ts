@@ -129,17 +129,21 @@ describe("fill-by deadline", () => {
     t.clock.now = new Date("2026-11-16T12:00:00Z");
   });
 
-  it("auto-confirms a full activity and auto-cancels one nobody decided", async () => {
+  it("a full activity also waits for the host; nobody deciding means auto-cancel", async () => {
     const host = await t.signIn("dl2@upenn.edu");
     const g = await t.signIn("g@upenn.edu");
     const full = (await request(t.app).post("/api/activities").set(host.h).send(badminton({ title: "Full one", capacity: 2 })).expect(201)).body.activity;
     await request(t.app).post(`/api/activities/${full.id}/join`).set(g.h).expect(200);
     const lonely = (await request(t.app).post("/api/activities").set(host.h).send(badminton({ title: "Lonely one" })).expect(201)).body.activity;
+    t.events.length = 0;
     t.clock.now = new Date("2026-11-18T21:01:00Z");
     await t.services.sweep();
+    expect((await Activity.findById(full.id).lean())!.status).toBe("deciding");
+    const deadline = t.events.find((e) => e.to === `user:${host.id}` && (e.payload as { type: string; activity: { id: string } }).activity?.id === full.id);
+    expect(deadline?.payload).toMatchObject({ type: "deadline", params: { full: true, joined: 2, capacity: 2 } });
+    await request(t.app).post(`/api/activities/${full.id}/decision`).set(host.h).send({ action: "start" }).expect(200);
     expect((await Activity.findById(full.id).lean())!.status).toBe("confirmed");
-    expect((await Activity.findById(lonely.id).lean())!.status).toBe("deciding");
-    t.clock.now = new Date("2026-11-18T23:00:01Z"); // start time, host never decided
+    t.clock.now = new Date("2026-11-18T23:00:01Z"); // start time, host never decided on the other one
     await t.services.sweep();
     expect((await Activity.findById(lonely.id).lean())!.status).toBe("cancelled");
     t.clock.now = new Date("2026-11-19T01:00:01Z");

@@ -78,7 +78,7 @@ const qs = (o: Record<string, string | number | undefined>) =>
   new URLSearchParams(Object.entries(o).filter(([, v]) => v !== undefined).map(([k, v]) => [k, String(v)])).toString();
 
 export const api = {
-  config: () => call<{ googleClientId: string | null; devLogin: boolean }>("GET", "/api/config"),
+  config: () => call<{ googleClientId: string | null; devLogin: boolean; googleMapsKey: string | null; googleMapsMapId: string | null }>("GET", "/api/config"),
   lookupSchool: (email: string) => call<{ school: School | null }>("GET", `/api/schools/lookup?${qs({ email })}`),
   devLogin: (email: string, name: string) => call<{ token: string; user: Me }>("POST", "/api/auth/dev", { email, name }),
   google: (credential: string) => call<{ token: string; user: Me }>("POST", "/api/auth/google", { credential }),

@@ -134,7 +134,7 @@ export function ActivityCard({ a, onOpen, compact }: { a: Activity; onOpen(): vo
 export function useNotificationText() {
   const { t, when } = useI18n();
   return (n: Notification) => {
-    const key = `n.${n.type}`;
+    const key = n.type === "deadline" && n.params?.full ? "n.deadline-full" : `n.${n.type}`;
     const p: Record<string, string | number> = { title: n.activity?.title ?? "" };
     for (const [k, v] of Object.entries(n.params ?? {})) if (typeof v === "string" || typeof v === "number") p[k] = v;
     const slot = n.params?.slot as { start?: string } | undefined;
