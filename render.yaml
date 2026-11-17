@@ -1,0 +1,25 @@
+# Render Blueprint: one Node service serves the API, the Socket.IO endpoint and the built web app.
+# MONGODB_URI: a MongoDB Atlas connection string (the free M0 cluster is enough).
+services:
+  - type: web
+    name: campus-connect
+    runtime: node
+    plan: free
+    buildCommand: >-
+      cd web && npm ci --include=dev && npm run build &&
+      cd ../server && npm ci --include=dev && npm run build
+    startCommand: cd server && npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: NODE_ENV
+        value: production
+      - key: CAMPUS_JWT_SECRET
+        generateValue: true
+      - key: MONGODB_URI
+        sync: false
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: ALLOW_DEV_LOGIN
+        value: "true"
