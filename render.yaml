@@ -7,7 +7,7 @@ services:
     plan: free
     buildCommand: >-
       cd web && npm ci --include=dev && npm run build &&
-      cd ../server && npm ci --include=dev && npm run build
+      cd ../server && npm ci --omit=dev
     startCommand: cd server && npm start
     healthCheckPath: /api/health
     envVars:

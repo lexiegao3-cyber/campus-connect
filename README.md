@@ -21,11 +21,11 @@ Find activity partners at your school, for a game, a meal, a study session, a mo
 ## Stack
 
 ```
-server/  Node 22 · Express 5 · TypeScript · MongoDB (Mongoose) · Socket.IO · Zod · JWT (jose)
+server/  Node 22 · Express 5 · JavaScript (ES modules) · MongoDB (Mongoose) · Socket.IO · Zod · JWT (jose)
          Google Identity Services ID-token sign-in · Luxon for time zones
-         availability.ts (free time → UTC intervals, DST-safe) · matching.ts (pure scoring)
-         services.ts (match, join, leave, host decision, deadline sweep) · realtime.ts
-web/     React 19 · Vite · TypeScript · socket.io-client · Google Maps JS API (Leaflet fallback) · en/zh
+         availability.js (free time → UTC intervals, DST-safe) · matching.js (pure scoring)
+         services.js (match, join, leave, host decision, deadline sweep) · realtime.js
+web/     React 19 · Vite · JavaScript (JSX) · socket.io-client · Google Maps JS API (Leaflet fallback) · en/zh
 ```
 
 School lookup uses [Hipo/university-domains-list](https://github.com/Hipo/university-domains-list) (MIT), bundled as `server/data/universities.json` (about 10,000 schools; subdomains such as `seas.upenn.edu` resolve to the school).
