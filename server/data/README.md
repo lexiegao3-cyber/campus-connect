@@ -1,0 +1,1 @@
+`universities.json` is derived from [Hipo/university-domains-list](https://github.com/Hipo/university-domains-list) (MIT License): each entry is `[name, ISO country code, [email domains]]`. Regenerate with `npm run data:universities`.
