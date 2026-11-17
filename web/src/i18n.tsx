@@ -3,7 +3,7 @@ import { createContext, useContext, useMemo, useState, type ReactNode } from "re
 export type Lang = "en" | "zh";
 
 const en = {
-  "app.name": "Campus Connect",
+  "app.name": "SpotMe",
   "app.tagline": "Find a buddy at your school.",
   "nav.discover": "Discover", "nav.post": "Post", "nav.mine": "Mine", "nav.inbox": "Inbox",
   "auth.title": "Never play, eat or study alone.",
@@ -69,7 +69,7 @@ const en = {
 type Key = keyof typeof en;
 
 const zh: Record<Key, string> = {
-  "app.name": "Campus Connect",
+  "app.name": "SpotMe",
   "app.tagline": "在本校找搭子。",
   "nav.discover": "发现", "nav.post": "发帖", "nav.mine": "我的", "nav.inbox": "通知",
   "auth.title": "打球、吃饭、自习，不再一个人。",
@@ -146,7 +146,7 @@ interface Ctx {
 }
 
 const I18n = createContext<Ctx | null>(null);
-const KEY = "cc.lang";
+const KEY = "spotme.lang";
 
 export function I18nProvider({ children }: { children: ReactNode }) {
   const [lang, setLangState] = useState<Lang>(() => {

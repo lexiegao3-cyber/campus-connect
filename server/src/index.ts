@@ -8,7 +8,7 @@ import { connect } from "./db.js";
 import { attachRealtime, nullHub, type Hub } from "./realtime.js";
 
 const port = Number(process.env.PORT ?? 8787);
-const uri = process.env.MONGODB_URI ?? "mongodb://127.0.0.1:27017/campus-connect";
+const uri = process.env.MONGODB_URI ?? "mongodb://127.0.0.1:27017/spotme";
 const cfg = authConfigFromEnv();
 await connect(uri);
 
@@ -32,4 +32,4 @@ const tick = () => services.sweep().catch((e) => console.error("sweep failed", e
 setInterval(tick, 30_000).unref();
 void tick();
 
-server.listen(port, () => console.log(`Campus Connect listening on http://localhost:${port}`));
+server.listen(port, () => console.log(`SpotMe listening on http://localhost:${port}`));

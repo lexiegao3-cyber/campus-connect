@@ -4,7 +4,7 @@ import { emojiFor } from "./ui";
 
 declare global {
   interface Window {
-    __ccMapsReady?: () => void;
+    __spotmeMapsReady?: () => void;
     /** Called by the Maps API when the key is rejected (wrong referrer, billing off). */
     gm_authFailure?: () => void;
   }
@@ -16,9 +16,9 @@ let loading: Promise<void> | null = null;
 function loadMaps(key: string, lang: string): Promise<void> {
   if ((window as { google?: typeof google }).google?.maps?.importLibrary) return Promise.resolve();
   loading ??= new Promise<void>((resolve, reject) => {
-    window.__ccMapsReady = () => resolve();
+    window.__spotmeMapsReady = () => resolve();
     const s = document.createElement("script");
-    s.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(key)}&loading=async&callback=__ccMapsReady&v=weekly&language=${lang}`;
+    s.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(key)}&loading=async&callback=__spotmeMapsReady&v=weekly&language=${lang}`;
     s.async = true;
     s.onerror = () => {
       loading = null;

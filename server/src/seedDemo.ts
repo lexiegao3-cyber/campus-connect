@@ -14,7 +14,7 @@ const P = {
   chinatown: { lat: 39.9555, lng: -75.1550 }, thirtieth: { lat: 39.9557, lng: -75.1820 },
 };
 
-await connect(process.env.MONGODB_URI ?? "mongodb://127.0.0.1:27017/campus-connect");
+await connect(process.env.MONGODB_URI ?? "mongodb://127.0.0.1:27017/spotme");
 if (process.argv.includes("--reset")) await mongoose.connection.dropDatabase();
 await Promise.all(Object.values(mongoose.models).map((m) => m.syncIndexes()));
 

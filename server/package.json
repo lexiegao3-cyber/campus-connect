@@ -1,5 +1,5 @@
 {
-  "name": "campus-connect-server",
+  "name": "spotme-server",
   "version": "3.0.0",
   "private": true,
   "type": "module",

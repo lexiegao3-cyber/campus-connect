@@ -84,7 +84,7 @@ export function StoreProvider({ me: initialMe, onLogout, children }: { me: Me; o
       setNotifications((xs) => [n, ...xs.filter((x) => x.id !== n.id)].slice(0, 50));
       setUnread((u) => u + 1);
       setVersion((v) => v + 1);
-      window.dispatchEvent(new CustomEvent("cc:notification", { detail: n }));
+      window.dispatchEvent(new CustomEvent("spotme:notification", { detail: n }));
     });
     s.on("activity", () => setVersion((v) => v + 1));
     return () => {

@@ -39,7 +39,7 @@ export class ApiError extends Error {
   }
 }
 
-const TOKEN = "cc.token";
+const TOKEN = "spotme.token";
 let token: string | null = (() => {
   try {
     return localStorage.getItem(TOKEN);
