@@ -4,7 +4,7 @@ export type Lang = "en" | "zh";
 
 const en = {
   "app.name": "SpotMe",
-  "app.tagline": "Find a buddy at your school.",
+  "app.tagline": "Campus activity-partner matching.",
   "nav.discover": "Discover", "nav.post": "Post", "nav.mine": "Mine", "nav.inbox": "Inbox",
   "auth.title": "Never play, eat or study alone.",
   "auth.sub": "Post what you want to do, or that you're free. We match you with people at your school, in real time.",
